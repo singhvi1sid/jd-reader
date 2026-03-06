@@ -42,12 +42,15 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // Avoid PKCE cookie parsing issues on some hosted callback flows.
+      checks: ["state"],
     })
   );
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
+  trustHost: true,
   providers,
   callbacks: {
     ...authConfig.callbacks,
