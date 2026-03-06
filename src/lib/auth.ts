@@ -8,6 +8,19 @@ import { authConfig } from "./auth.config";
 
 import type { Provider } from "next-auth/providers";
 
+async function ensureRecruiterId(email: string, name?: string | null) {
+  await connectDB();
+  const existing = await Recruiter.findOne({ email });
+  if (existing) return existing._id.toString();
+
+  const created = await Recruiter.create({
+    name: name || "Recruiter",
+    email,
+    provider: "google",
+  });
+  return created._id.toString();
+}
+
 const providers: Provider[] = [
   Credentials({
     name: "credentials",
@@ -54,27 +67,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers,
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user, account }) {
-      if (account?.provider === "google") {
-        await connectDB();
-        const existing = await Recruiter.findOne({ email: user.email });
-        if (!existing) {
-          const created = await Recruiter.create({
-            name: user.name || "Recruiter",
-            email: user.email,
-            provider: "google",
-          });
-          user.id = created._id.toString();
-        } else {
-          user.id = existing._id.toString();
-        }
-      }
+    async signIn() {
+      // Keep sign-in permissive; database sync happens in jwt callback.
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.recruiterId = user.id;
       }
+
+      if (account?.provider === "google" && token.email) {
+        try {
+          token.recruiterId = await ensureRecruiterId(token.email, token.name);
+        } catch (error) {
+          console.error("Google recruiter sync failed:", error);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
