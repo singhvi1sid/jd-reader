@@ -43,7 +43,10 @@ export function ShareDialog({ assessmentId, accessCode, jobTitle, onClose }: Sha
       });
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || "Failed to send");
+      if (!res.ok) {
+        const details = data?.details ? ` (${data.details})` : "";
+        throw new Error((data.error || "Failed to send") + details);
+      }
 
       setSendResult(data);
       setSent(true);

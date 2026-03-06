@@ -4,8 +4,13 @@ import { connectDB } from "@/lib/mongodb";
 import { Assessment } from "@/lib/models/assessment";
 
 function getTransporter() {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = process.env.GMAIL_USER
+    ?.trim()
+    .replace(/^['"]|['"]$/g, "");
+  const pass = process.env.GMAIL_APP_PASSWORD
+    ?.trim()
+    .replace(/^['"]|['"]$/g, "")
+    .replace(/\s+/g, "");
   if (!user || !pass) return null;
 
   return nodemailer.createTransport({
@@ -148,6 +153,20 @@ export async function POST(
     }
 
     const sentCount = results.filter((r) => r.sent).length;
+    if (sentCount === 0) {
+      const firstError = results.find((r) => !r.sent && "error" in r)?.error;
+      return NextResponse.json(
+        {
+          error: "Failed to send invitations. Check Gmail app password and sender account settings.",
+          details: firstError,
+          sent: 0,
+          total: emails.length,
+          results,
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json({ sent: sentCount, total: emails.length, results });
   } catch (error) {
     console.error("Invite failed:", error);
