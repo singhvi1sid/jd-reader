@@ -23,3 +23,13 @@ export const geminiFlash = genAI.getGenerativeModel({
     temperature: 0.7,
   },
 });
+
+// Deterministic model for scoring — low temperature ensures
+// the same answer consistently receives the same score
+export const geminiScorer = genAI.getGenerativeModel({
+  model: "gemini-2.5-flash",
+  generationConfig: {
+    responseMimeType: "application/json",
+    temperature: 0.1,
+  },
+});

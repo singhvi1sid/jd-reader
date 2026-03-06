@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Submission } from "@/lib/models/submission";
 import { Assessment } from "@/lib/models/assessment";
-import { geminiFlash } from "@/lib/gemini";
+import { geminiScorer } from "@/lib/gemini";
 import { getScoringPrompt } from "@/lib/prompts";
 import { scoringResponseSchema } from "@/lib/schemas";
 
@@ -55,7 +55,7 @@ export async function POST(
       skillTested: q.skillTested,
     }));
 
-    const result = await geminiFlash.generateContent(
+    const result = await geminiScorer.generateContent(
       getScoringPrompt({
         jobTitle: assessment.jobTitle,
         seniority: assessment.seniority,
