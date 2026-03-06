@@ -8,6 +8,23 @@ import { auth } from "@/lib/auth";
 
 export const maxDuration = 55;
 
+function parseModelJson<T>(rawText: string, stage: string): T {
+  const cleaned = rawText
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch {
+    throw new Error(
+      `AI returned invalid ${stage} response. Please retry generation once.`
+    );
+  }
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -63,7 +80,7 @@ export async function POST(request: NextRequest) {
       JD_ANALYSIS_PROMPT + jobDescription
     );
     const analysisText = analysisResult.response.text();
-    const rawAnalysis = JSON.parse(analysisText);
+    const rawAnalysis = parseModelJson<unknown>(analysisText, "JD analysis");
     const analysis = jdAnalysisSchema.parse(rawAnalysis);
 
     await dbPromise;
@@ -118,7 +135,9 @@ export async function POST(request: NextRequest) {
               })
             );
             const simText = simResult.response.text();
-            const simData = similarityResponseSchema.parse(JSON.parse(simText));
+            const simData = similarityResponseSchema.parse(
+              parseModelJson<unknown>(simText, "similarity check")
+            );
 
             if (simData.similarityScore >= 50 && simData.reusableQuestions.length > 0) {
               reusableContext = {
@@ -152,7 +171,10 @@ export async function POST(request: NextRequest) {
       getAssessmentPrompt(analysis, reusableContext)
     );
     const assessmentText = assessmentResult.response.text();
-    const rawAssessment = JSON.parse(assessmentText);
+    const rawAssessment = parseModelJson<unknown>(
+      assessmentText,
+      "assessment generation"
+    );
     const assessmentData = assessmentResponseSchema.parse(rawAssessment);
 
     const assessment = await Assessment.create({
